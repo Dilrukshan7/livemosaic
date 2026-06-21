@@ -10,6 +10,7 @@ interface UploadZoneProps {
   preview?: string | null;
   error?: string;
   maxSize: number;
+  disabled?: boolean;
   onFile: (file: File) => void;
 }
 
@@ -20,13 +21,14 @@ export default function UploadZone({
   preview,
   error,
   maxSize,
+  disabled = false,
   onFile,
 }: UploadZoneProps) {
   const onDrop = useCallback(
     (accepted: File[]) => {
-      if (accepted[0]) onFile(accepted[0]);
+      if (accepted[0] && !disabled) onFile(accepted[0]);
     },
-    [onFile]
+    [onFile, disabled]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -34,6 +36,7 @@ export default function UploadZone({
     accept,
     maxFiles: 1,
     maxSize,
+    disabled,
   });
 
   const hasFile = !!file;
@@ -43,9 +46,11 @@ export default function UploadZone({
       <div
         {...getRootProps()}
         className={cn(
-          "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors",
-          isDragActive && "border-blue-400 bg-blue-50",
-          !isDragActive && !hasFile && !error && "border-gray-200 hover:border-blue-300 hover:bg-gray-50",
+          "border-2 border-dashed rounded-xl p-6 text-center transition-colors",
+          disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+          isDragActive && !disabled && "border-blue-400 bg-blue-50",
+          !isDragActive && !hasFile && !error && !disabled && "border-gray-200 hover:border-blue-300 hover:bg-gray-50",
+          !isDragActive && !hasFile && !error && disabled && "border-gray-200",
           !isDragActive && hasFile && !error && "border-green-400 bg-green-50",
           error && "border-red-300 bg-red-50"
         )}
@@ -53,23 +58,23 @@ export default function UploadZone({
         <input {...getInputProps()} />
 
         {preview ? (
-          /* Image preview */
           <div className="space-y-2">
             <img src={preview} alt="Preview" className="mx-auto max-h-40 rounded-lg object-cover" />
             <p className="text-xs text-gray-500">{file?.name} — {file ? formatBytes(file.size) : ""}</p>
+            {!disabled && <p className="text-xs text-gray-400">Click to replace</p>}
           </div>
         ) : hasFile ? (
-          /* Non-image file selected */
           <div className="text-green-700">
             <svg className="mx-auto mb-2 h-10 w-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <p className="text-sm font-medium">{file.name}</p>
-            <p className="text-xs text-green-600 mt-0.5">{formatBytes(file.size)} — click to replace</p>
+            <p className="text-xs text-green-600 mt-0.5">
+              {formatBytes(file.size)}{!disabled && " — click to replace"}
+            </p>
           </div>
         ) : (
-          /* Empty state */
           <div className="text-gray-400">
             <svg className="mx-auto mb-2 h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}

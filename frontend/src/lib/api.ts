@@ -12,23 +12,62 @@ async function authFetch(url: string, init: RequestInit = {}, token: string): Pr
   });
 }
 
-export async function generateMosaic(
+export function generateMosaic(
   mainImage: File,
   tilesZip: File,
   settings: MosaicSettings,
-  token: string
+  token: string,
+  onUploadProgress?: (pct: number) => void
 ): Promise<{ job_id: string }> {
-  const form = new FormData();
-  form.append("main_image", mainImage);
-  form.append("tiles_zip", tilesZip);
-  form.append("settings_json", JSON.stringify(settings));
+  return new Promise((resolve, reject) => {
+    const form = new FormData();
+    form.append("main_image", mainImage);
+    form.append("tiles_zip", tilesZip);
+    form.append("settings_json", JSON.stringify(settings));
 
-  const res = await authFetch(`${API}/api/mosaic/generate`, { method: "POST", body: form }, token);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: "Unknown error" }));
-    throw new Error(err.detail ?? "Generation failed");
-  }
-  return res.json();
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener("progress", (e) => {
+      if (e.lengthComputable && onUploadProgress) {
+        onUploadProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    });
+
+    xhr.addEventListener("load", () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch {
+          reject(new Error("Invalid server response"));
+        }
+      } else if (xhr.status === 401) {
+        reject(new Error("Authentication failed. Please sign out and sign back in."));
+      } else if (xhr.status === 429) {
+        reject(new Error("Too many requests. Please wait a minute and try again."));
+      } else if (xhr.status === 403) {
+        try {
+          const err = JSON.parse(xhr.responseText);
+          reject(new Error(err.detail ?? "Plan limit reached. Please upgrade."));
+        } catch {
+          reject(new Error("Plan limit reached. Please upgrade."));
+        }
+      } else {
+        try {
+          const err = JSON.parse(xhr.responseText);
+          reject(new Error(err.detail ?? `Server error (${xhr.status})`));
+        } catch {
+          reject(new Error(`Server error (${xhr.status})`));
+        }
+      }
+    });
+
+    xhr.addEventListener("error", () => reject(new Error("Network error — check your connection and try again.")));
+    xhr.addEventListener("abort", () => reject(new Error("Upload cancelled.")));
+
+    xhr.open("POST", `${API}/api/mosaic/generate`);
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.send(form);
+  });
 }
 
 export async function getJobStatus(jobId: string, token: string): Promise<JobStatusResponse> {
