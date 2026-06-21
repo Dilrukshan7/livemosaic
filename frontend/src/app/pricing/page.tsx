@@ -57,7 +57,7 @@ export default function PricingPage() {
     if (!user || !token) { window.location.href = "/auth/login"; return; }
     setLoading(true);
     try {
-      const { checkout_url } = await createCheckout(planName, user.id, token);
+      const { checkout_url } = await createCheckout(planName, token);
       window.location.href = checkout_url;
     } catch (e) {
       alert("Could not start checkout. Please try again.");

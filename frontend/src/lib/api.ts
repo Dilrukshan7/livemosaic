@@ -1,6 +1,6 @@
 import { MosaicSettings, JobStatusResponse } from "@/types";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
 
 async function authFetch(url: string, init: RequestInit = {}, token: string): Promise<Response> {
   return fetch(url, {
@@ -61,9 +61,9 @@ export async function getCurrencyRates(base = "USD") {
   return res.json();
 }
 
-export async function createCheckout(planName: string, userId: string, token: string) {
+export async function createCheckout(planName: string, token: string) {
   const res = await authFetch(
-    `${API}/api/plans/checkout/${planName}?user_id=${encodeURIComponent(userId)}`,
+    `${API}/api/plans/checkout/${planName}`,
     { method: "POST" },
     token
   );
