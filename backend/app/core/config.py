@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     admin_secret_key: str = "change-me-in-production"
 
     frontend_url: str = "http://localhost:3000"
+    # Regex of additional allowed CORS origins. Defaults to any Vercel
+    # deployment URL (production alias + per-deploy preview URLs), since
+    # Vercel mints a new hostname on every deploy.
+    frontend_url_regex: str = r"https://.*\.vercel\.app"
     environment: str = "development"
 
     exchange_rate_api_key: Optional[str] = None
